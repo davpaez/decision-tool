@@ -3,14 +3,14 @@ import uuid
 
 class Tree:
     def __init__(self):
-        self.nodes = set()
-        self.spaces = set()
+        self.nodes = []
+        self.spaces = []
 
     def add_node(self, node):
-        self.nodes.add(node)
+        self.nodes.append(node)
 
     def add_space(self, space):
-        self.spaces.add(space)
+        self.spaces.append(space)
 
 
 class Node:
@@ -28,6 +28,9 @@ class Node:
         self.option_id = None
         self.child_space = None
 
+        self.child_nodes = []
+        self.parent_node = None
+
         tree.add_node(self)
 
     
@@ -44,6 +47,19 @@ class Node:
         else:
             return self.parent_space.options_labels[self.option_id]
 
+    def add_child_node(self, node):
+        self.child_nodes.append(node)
+
+    def build_child_nodes(self, tree):
+        if self.child_space is not None:
+            child_nodes = []
+            for i, option in enumerate(self.child_space.options_labels):
+                n = Node(tree)
+                n.parent_space = self.child_space
+                n.option_id = i
+                child_nodes.append(n)
+            self.child_nodes = child_nodes
+
 
 class Space(metaclass=abc.ABCMeta):
     """Discrete space that follows a node.
@@ -56,7 +72,7 @@ class Space(metaclass=abc.ABCMeta):
     def __init__(self, tree, label):
         self.label = label
         self.options_labels = []
-        self.parent_nodes = set()
+        self.parent_nodes = []
 
         tree.add_space(self)
 
@@ -69,18 +85,11 @@ class Space(metaclass=abc.ABCMeta):
         self.options_labels.append(option_label)
 
     def add_parent_node(self, parent_node):
-        self.parent_nodes.add(parent_node)
+        self.parent_nodes.append(parent_node)
 
     def build_child_nodes(self, tree):
-        child_nodes = []
-
-        for i, option in enumerate(self.options_labels):
-            n = Node(tree)
-            n.parent_space = self
-            n.option_id = i
-            child_nodes.append(n)
-
-        return child_nodes
+        for node in self.parent_nodes:
+            node.build_child_nodes(tree)
 
     @abc.abstractmethod
     def example(self):
@@ -139,9 +148,9 @@ pais.add_option('Italia')
 pais.add_option('Edimburgo')
 pais.add_option('Colombia')
 
-children = pais.build_child_nodes(tree)
-italia = children[0]
-edimburgo = children[1]
+pais.build_child_nodes(tree)
+italia = root.child_nodes[0]
+edimburgo = root.child_nodes[1]
 
 action2 = SpaceFactory.build(tree, 'action', 'TipoTrabajo')
 action2.add_option('Independiente')
